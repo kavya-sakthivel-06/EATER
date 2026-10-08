@@ -10,3 +10,7 @@ router = APIRouter(prefix="/api")
 @router.get("/predict/spending")
 def predict_spending(db: Session = Depends(get_db), s: Student = Depends(current_student)):
     return ml.predict_spending(db, s.id, s.monthly_budget)
+
+@router.get("/anomalies")
+def anomalies(db: Session = Depends(get_db), s: Student = Depends(current_student)):
+    return ml.anomalies(db, s.id)

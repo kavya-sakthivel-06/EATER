@@ -2,6 +2,7 @@ import calendar
 from datetime import date
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import IsolationForest
 from models import FoodLog, Food, Canteen
 
 
@@ -116,4 +117,41 @@ def predict_spending(db, sid, budget):
         "budget": budget,
         "over_budget": proj > budget,
         "method": method
+    }
+
+# Spending anomaly detection
+def anomalies(db, sid):
+    d = _daily(db, sid)
+
+    if len(d) < 10:
+        return {
+            "days": [],
+            "message": "Need at least 10 days of history to detect unusual spending."
+        }
+
+    model = IsolationForest(
+        contamination=0.08,
+        random_state=0
+    ).fit(d[["spend", "calories"]])
+
+    d["flag"] = model.predict(d[["spend", "calories"]])
+
+    hi = d[
+        (d.flag == -1) &
+        (d.spend > d.spend.median())
+    ].sort_values(
+        "day",
+        ascending=False
+    ).head(5)
+
+    return {
+        "days": [
+            {
+                "date": str(r.day),
+                "spend": int(r.spend),
+                "calories": int(r.calories)
+            }
+            for r in hi.itertuples()
+        ],
+        "typical_daily_spend": int(d.spend.median())
     }
